@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}SmartPark AI — Guard Dashboard{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+  <div>
+    <h1 style="font-size: 1.85rem; font-weight: 800;">🛡️ Guard Operations Dashboard</h1>
+    <p style="color: var(--text-muted);">Facility Control & Security Console | Logged in as: <strong>{{ guard_name }}</strong></p>
+  </div>
+  <div>
+    <a href="{{ url_for('api_guard_logout') }}" class="btn btn-secondary" style="padding: 0.4rem 0.9rem; font-size: 0.85rem;">Logout</a>
+  </div>
+</div>
+
+<!-- Live Facility KPI Metrics -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+  
+  <div class="card" style="border-left: 4px solid #38bdf8;">
+    <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700;">TOTAL CAPACITY</div>
+    <div style="font-size: 2rem; font-weight: 800; color: var(--text-main);" id="kpi-total">15</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);"><span id="kpi-vacant">0</span> Vacant | <span id="kpi-blocked">0</span> Blocked</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid #eab308;">
+    <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700;">ACTIVE SESSIONS</div>
+    <div style="font-size: 2rem; font-weight: 800; color: #fde047;" id="kpi-active">0</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);"><span id="kpi-reserved">0</span> Reserved | <span id="kpi-occupied">0</span> Parked</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid #22c55e;">
+    <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700;">TODAY'S REVENUE</div>
+    <div style="font-size: 2rem; font-weight: 800; color: #4ade80;" id="kpi-revenue">₹0.00</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);"><span id="kpi-entries">0</span> Entries | <span id="kpi-exits">0</span> Exits</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid #ef4444;">
+    <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700;">OPEN ALERTS</div>
+    <div style="font-size: 2rem; font-weight: 800; color: #f87171;" id="kpi-alerts">0</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">Requires Security Attention</div>
+  </div>
+
+</div>
+
+<!-- Active Security & Incident Alerts Section -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div class="card-header">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <span class="card-title">🚨 Facility Security & Incident Alerts</span>
+      <span class="badge badge-occupied" id="badge-open-alerts-count">0 Open</span>
+    </div>
+    <button id="btn-refresh-alerts" class="btn btn-secondary" style="padding: 0.3rem 0.7rem; font-size: 0.8rem;">Refresh Alerts</button>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+      <thead>
+        <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-muted);">
+          <th style="padding: 0.75rem 0.5rem;">TYPE</th>
+          <th style="padding: 0.75rem 0.5rem;">SEVERITY</th>
+          <th style="padding: 0.75rem 0.5rem;">DESCRIPTION</th>
+          <th style="padding: 0.75rem 0.5rem;">STATUS</th>
+          <th style="padding: 0.75rem 0.5rem;">TIME</th>
+          <th style="padding: 0.75rem 0.5rem; text-align: right;">ACTION</th>
+        </tr>
+      </thead>
+      <tbody id="alerts-table-body">
+        <tr>
+          <td colspan="6" style="padding: 1.5rem; text-align: center; color: var(--text-muted);">No open incident alerts. Facility operating normally.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="grid-2" style="gap: 2rem; margin-bottom: 2rem;">
+
+  <!-- Dynamic Pricing Configuration Panel -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">💵 Dynamic Category Pricing Rules</span>
+    </div>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+      Authorized guards can adjust rates per category. Active parking sessions retain their initial pricing snapshot.
+    </p>
+
+    <!-- Category Tabs -->
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem;">
+      <button type="button" class="btn btn-secondary btn-pricing-tab active" data-cat="Normal Parking" style="flex: 1; font-size: 0.85rem;">Normal</button>
+      <button type="button" class="btn btn-secondary btn-pricing-tab" data-cat="EV Charging Parking" style="flex: 1; font-size: 0.85rem;">EV Charging</button>
+      <button type="button" class="btn btn-secondary btn-pricing-tab" data-cat="Disabled Parking" style="flex: 1; font-size: 0.85rem;">Disabled</button>
+    </div>
+
+    <form id="pricing-form" onsubmit="return false;">
+      <div class="grid-2" style="gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">FREE DURATION (MINUTES)</label>
+          <input type="number" id="price-free-min" class="form-control" min="0" value="60" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">GRACE PERIOD (MINUTES)</label>
+          <input type="number" id="price-grace-min" class="form-control" min="0" value="10" required>
+        </div>
+      </div>
+
+      <div class="grid-2" style="gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">RATE PER BLOCK (₹)</label>
+          <input type="number" id="price-rate" class="form-control" min="0" step="1" value="50.00" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">BLOCK INTERVAL (MINUTES)</label>
+          <input type="number" id="price-interval" class="form-control" min="15" step="15" value="120" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ROUNDING POLICY</label>
+        <select id="price-policy" class="form-control">
+          <option value="CEIL">Round Up to Next Block (Default CEIL)</option>
+          <option value="FLOOR">Round Down (FLOOR)</option>
+        </select>
+      </div>
+
+      <div id="pricing-feedback" style="display: none;" class="alert-banner"></div>
+
+      <button type="button" id="btn-save-pricing" class="btn btn-primary" style="width: 100%; padding: 0.8rem; font-size: 1rem;">
+        Save Pricing Settings
+      </button>
+    </form>
+  </div>
+
+  <!-- Recent Facility Activity -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📋 Recent Vehicle Movements</span>
+      <button id="btn-refresh-activity" class="btn btn-secondary" style="padding: 0.3rem 0.7rem; font-size: 0.8rem;">Refresh</button>
+    </div>
+    <div style="overflow-y: auto; max-height: 380px;">
+      <div id="recent-activity-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <div style="color: var(--text-muted); text-align: center; padding: 1.5rem;">Loading recent sessions...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/guard.js') }}"></script>
+{% endblock %}
+

@@ -1,0 +1,35 @@
+# Virtual Environment
+smartpark-env/
+venv/
+env/
+
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Testing & Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local Storage, Camera Captures & Logs
+data/captures/entry/*
+data/captures/exit/*
+data/logs/*
+!data/captures/entry/.gitkeep
+!data/captures/exit/.gitkeep
+
+# Environment variables
+.env
+
+# Model runs & checkpoints (best.pt in models/detector/ is preserved)
+training/runs/*
+!training/runs/.gitkeep
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

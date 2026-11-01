@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}SmartPark AI — Driver Entry Machine{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+  <div>
+    <h1 style="font-size: 1.85rem; font-weight: 800;">🚗 Driver Entry Machine</h1>
+    <p style="color: var(--text-muted);">Entry Gate Kiosk — Automated Number Plate Detection & Allocation</p>
+  </div>
+  <div>
+    <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+      GATE: ENTRY 01 (ACTIVE)
+    </span>
+  </div>
+</div>
+
+<div class="grid-2" style="gap: 2rem;">
+  
+  <!-- Left Column: Webcam & Computer Vision Preview -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📷 Entry Camera & ANPR Scanner</span>
+      <div style="display: flex; gap: 0.5rem;">
+        <button id="btn-start-cam" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Start Camera</button>
+        <button id="btn-capture-frame" class="btn btn-warning" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Capture & Scan</button>
+      </div>
+    </div>
+
+    <!-- Video Box -->
+    <div class="camera-box" id="cam-container">
+      <video id="webcam-video" autoplay playsinline muted></video>
+      <canvas id="detection-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+      <div id="cam-placeholder" style="color: var(--text-muted); text-align: center; padding: 1rem;">
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">📹</div>
+        <div>Camera Inactive</div>
+        <div style="font-size: 0.8rem; margin-top: 0.25rem;">Click "Start Camera" or select a demo sample below</div>
+      </div>
+    </div>
+
+    <!-- Quick Sample Selector for Demo Testing -->
+    <div style="margin-top: 1rem; padding: 0.75rem; background: var(--bg-card); border-radius: 8px;">
+      <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem;">⚡ Instant Demo Test Plates:</div>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary btn-sample" data-plate="DL01AB1234" data-cat="Normal Parking" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">DL01AB1234 (Normal)</button>
+        <button class="btn btn-secondary btn-sample" data-plate="MH02EV1001" data-cat="EV Charging Parking" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">MH02EV1001 (EV)</button>
+        <button class="btn btn-secondary btn-sample" data-plate="KA05MG8821" data-cat="Disabled Parking" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">KA05MG8821 (Disabled)</button>
+        <button class="btn btn-secondary btn-sample" data-plate="22BH1029AB" data-cat="Normal Parking" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">22BH1029AB (BH Series)</button>
+      </div>
+    </div>
+
+    <!-- ANPR Visual Crop & Confidence Panel -->
+    <div id="anpr-preview-panel" style="margin-top: 1rem; display: none; padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">EXTRACTED NUMBER PLATE</span>
+        <span id="confidence-badge" class="badge">CONFIDENCE</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <img id="cropped-plate-img" src="" alt="Extracted Plate Crop" style="max-height: 55px; border-radius: 6px; border: 1px solid #475569; background: #000;">
+        <div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Recognized Text:</div>
+          <div id="recognized-text-display" style="font-size: 1.35rem; font-weight: 800; color: var(--accent-blue); letter-spacing: 0.05em;">-</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Column: Registration Input, Category Selection & Ticket Confirmation -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📋 Parking Slot Allocation</span>
+    </div>
+
+    <!-- Status Alert Messages -->
+    <div id="entry-alert-box" style="display: none;" class="alert-banner"></div>
+
+    <form id="entry-form" onsubmit="return false;">
+      
+      <!-- Registration Number Input -->
+      <div class="form-group">
+        <label class="form-label" for="reg-number-input">VEHICLE REGISTRATION NUMBER</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="reg-number-input" class="form-control" placeholder="e.g. DL01AB1234 or MH12DE1433" style="text-transform: uppercase; font-weight: 700; font-size: 1.25rem; letter-spacing: 0.05em;" required>
+          <button type="button" id="btn-clear-reg" class="btn btn-secondary" style="padding: 0 1rem;">Clear</button>
+        </div>
+        <small style="color: var(--text-muted); font-size: 0.8rem;">Auto-populated from ANPR camera feed or manually editable.</small>
+      </div>
+
+      <!-- Category Selection Cards -->
+      <div class="form-group">
+        <label class="form-label">SELECT PARKING CATEGORY</label>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem;">
+          
+          <!-- Disabled Parking -->
+          <label class="category-choice-card" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 2px solid var(--border-color); border-radius: 10px; cursor: pointer; background: var(--bg-card); transition: all 0.2s;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <input type="radio" name="parking_category" value="Disabled Parking" style="width: 1.25rem; height: 1.25rem;">
+              <div>
+                <div style="font-weight: 700; font-size: 1.05rem;">♿ Disabled Parking</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Accessible priority slots near elevators and ramps</div>
+              </div>
+            </div>
+            <span class="badge badge-vacant" id="cat-avail-disabled">{{ summary.by_category['Disabled Parking'].vacant }} Available</span>
+          </label>
+
+          <!-- EV Charging Parking -->
+          <label class="category-choice-card" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 2px solid var(--border-color); border-radius: 10px; cursor: pointer; background: var(--bg-card); transition: all 0.2s;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <input type="radio" name="parking_category" value="EV Charging Parking" style="width: 1.25rem; height: 1.25rem;">
+              <div>
+                <div style="font-weight: 700; font-size: 1.05rem;">⚡ EV Charging Parking</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Dedicated fast-charging stations for electric vehicles</div>
+              </div>
+            </div>
+            <span class="badge badge-vacant" id="cat-avail-ev">{{ summary.by_category['EV Charging Parking'].vacant }} Available</span>
+          </label>
+
+          <!-- Normal Parking -->
+          <label class="category-choice-card" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 2px solid var(--border-color); border-radius: 10px; cursor: pointer; background: var(--bg-card); transition: all 0.2s;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <input type="radio" name="parking_category" value="Normal Parking" checked style="width: 1.25rem; height: 1.25rem;">
+              <div>
+                <div style="font-weight: 700; font-size: 1.05rem;">🚗 Normal Parking</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Standard multi-level facility parking spaces</div>
+              </div>
+            </div>
+            <span class="badge badge-vacant" id="cat-avail-normal">{{ summary.by_category['Normal Parking'].vacant }} Available</span>
+          </label>
+
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <button type="button" id="btn-allocate-slot" class="btn btn-primary" style="width: 100%; padding: 0.9rem; font-size: 1.1rem; margin-top: 0.5rem;">
+        🎟️ Confirm & Allocate Slot
+      </button>
+
+    </form>
+
+    <!-- Issued Parking Ticket Display -->
+    <div id="ticket-display" style="display: none; margin-top: 1.5rem;" class="ticket-card">
+      <div class="ticket-header">
+        <div>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">OFFICIAL ENTRY PASS</span>
+          <div style="font-weight: 800; font-size: 1.25rem; color: var(--accent-blue);" id="tkt-id">TKT-0000</div>
+        </div>
+        <div>
+          <span class="badge badge-reserved" id="tkt-status">RESERVED</span>
+        </div>
+      </div>
+
+      <div class="ticket-row">
+        <span class="label">Vehicle Registration:</span>
+        <span class="value" id="tkt-reg" style="font-size: 1.1rem; color: #38bdf8;">-</span>
+      </div>
+      <div class="ticket-row">
+        <span class="label">Allocated Category:</span>
+        <span class="value" id="tkt-category">-</span>
+      </div>
+      <div class="ticket-row">
+        <span class="label">Assigned Parking Bay:</span>
+        <span class="value" id="tkt-slot" style="font-size: 1.4rem; color: #fde047; font-weight: 900;">-</span>
+      </div>
+      <div class="ticket-row">
+        <span class="label">Entry Timestamp:</span>
+        <span class="value" id="tkt-entry-time">-</span>
+      </div>
+
+      <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed var(--border-color); font-size: 0.8rem; color: var(--text-muted); text-align: center;">
+        📌 Slot status is now RESERVED (Yellow). Proceed to assigned bay. Billing begins only when physical parking starts.
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/entry.js') }}"></script>
+{% endblock %}
+

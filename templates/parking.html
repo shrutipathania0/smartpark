@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}SmartPark AI — Parking Area Monitoring & Simulator{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+  <div>
+    <h1 style="font-size: 1.85rem; font-weight: 800;">🅿️ Parking Area Monitoring & IoT Simulator</h1>
+    <p style="color: var(--text-muted);">Real-Time Facility Digital Twin & Incident Control Center</p>
+  </div>
+  <div style="display: flex; gap: 0.75rem; align-items: center;">
+    <div style="display: flex; gap: 0.5rem; background: var(--bg-surface); padding: 0.4rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.8rem; font-weight: 600;">
+      <span style="color: #4ade80;">● VACANT</span>
+      <span style="color: #fde047;">● RESERVED</span>
+      <span style="color: #f87171;">● OCCUPIED</span>
+      <span style="color: #94a3b8;">● BLOCKED</span>
+    </div>
+  </div>
+</div>
+
+<!-- Facility Overview Grid Layout -->
+<div class="grid-3" style="gap: 1.5rem; margin-bottom: 2rem;">
+  
+  <!-- Category 1: Disabled Parking -->
+  <div class="card" style="border-top: 4px solid #38bdf8;">
+    <div class="card-header">
+      <span class="card-title">♿ Disabled Parking</span>
+      <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;" id="badge-disabled-count">3 Slots</span>
+    </div>
+    <div class="slots-container" id="container-disabled">
+      <!-- Dynamic slot cards -->
+    </div>
+  </div>
+
+  <!-- Category 2: EV Charging Parking -->
+  <div class="card" style="border-top: 4px solid #22c55e;">
+    <div class="card-header">
+      <span class="card-title">⚡ EV Charging Parking</span>
+      <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;" id="badge-ev-count">3 Slots</span>
+    </div>
+    <div class="slots-container" id="container-ev">
+      <!-- Dynamic slot cards -->
+    </div>
+  </div>
+
+  <!-- Category 3: Normal Parking -->
+  <div class="card" style="border-top: 4px solid #818cf8;">
+    <div class="card-header">
+      <span class="card-title">🚗 Normal Parking</span>
+      <span class="badge" style="background: rgba(129, 140, 248, 0.15); color: #818cf8;" id="badge-normal-count">9 Slots</span>
+    </div>
+    <div class="slots-container" id="container-normal">
+      <!-- Dynamic slot cards -->
+    </div>
+  </div>
+
+</div>
+
+<!-- Interactive Simulation Controls Panel -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div class="card-header">
+    <span class="card-title">🕹️ IoT Parking Simulation & Incident Controls</span>
+    <span style="font-size: 0.85rem; color: var(--text-muted);">Demonstrate real facility edge-cases and guard alerts live</span>
+  </div>
+
+  <!-- Simulation Action Alert -->
+  <div id="sim-alert-box" style="display: none;" class="alert-banner"></div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+    
+    <!-- Action 1: Park Correctly -->
+    <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">✅ Park Correctly</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Vehicle parks in reserved slot. Changes to OCCUPIED and begins billing timer.</div>
+      </div>
+      <button class="btn btn-success btn-sim" data-action="park_correctly" style="width: 100%; font-size: 0.85rem;">Simulate Parked</button>
+    </div>
+
+    <!-- Action 2: Place Obstruction -->
+    <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">🚧 Place Obstacle</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Places cone/debris in a space, marking it BLOCKED and alerting guard.</div>
+      </div>
+      <div style="display: flex; gap: 0.4rem;">
+        <select id="sim-block-slot-select" class="form-control" style="padding: 0.4rem; font-size: 0.85rem; width: 60%;"></select>
+        <button class="btn btn-warning btn-sim" id="btn-place-obstacle" style="width: 40%; font-size: 0.85rem; padding: 0.4rem;">Block</button>
+      </div>
+    </div>
+
+    <!-- Action 3: Clear Obstruction -->
+    <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">🧹 Clear Obstacle</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Clears physical obstacle and restores slot to its previous valid state safely.</div>
+      </div>
+      <div style="display: flex; gap: 0.4rem;">
+        <select id="sim-clear-slot-select" class="form-control" style="padding: 0.4rem; font-size: 0.85rem; width: 60%;"></select>
+        <button class="btn btn-secondary btn-sim" id="btn-clear-obstacle" style="width: 40%; font-size: 0.85rem; padding: 0.4rem;">Clear</button>
+      </div>
+    </div>
+
+    <!-- Action 4: Park Incorrectly -->
+    <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">⚠️ Park Incorrectly</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Simulates improper alignment; triggers warning alert on Guard Console.</div>
+      </div>
+      <button class="btn btn-secondary btn-sim" data-action="park_incorrectly" style="width: 100%; font-size: 0.85rem;">Trigger Violation</button>
+    </div>
+
+    <!-- Action 5: Block Driving Lane -->
+    <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">🛑 Block Driving Lane</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Simulates vehicle breakdown or obstruction blocking facility transit lane.</div>
+      </div>
+      <button class="btn btn-danger btn-sim" data-action="block_lane" style="width: 100%; font-size: 0.85rem;">Block Lane A</button>
+    </div>
+
+    <!-- Action 6: Cross Parking -->
+    <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">❌ Cross Parking</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Vehicle parked diagonally across bay lines without corrupting session.</div>
+      </div>
+      <button class="btn btn-secondary btn-sim" data-action="cross_parking" style="width: 100%; font-size: 0.85rem;">Simulate Cross</button>
+    </div>
+
+    <!-- Action 7: Occupy Two Spaces -->
+    <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">↔️ Occupy Two Spaces</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Vehicle straddles adjacent bays N-04 & N-05; triggers critical guard alert.</div>
+      </div>
+      <button class="btn btn-danger btn-sim" data-action="occupy_two_spaces" style="width: 100%; font-size: 0.85rem;">Occupy N-04 & N-05</button>
+    </div>
+
+    <!-- Action 8: Wrong Category Parking -->
+    <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">🚫 Wrong Space / Bay</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Vehicle assigned N-01 parks in EV slot E-01; alerts security staff.</div>
+      </div>
+      <button class="btn btn-secondary btn-sim" data-action="wrong_space" style="width: 100%; font-size: 0.85rem;">Simulate Wrong Bay</button>
+    </div>
+
+    <!-- Action 9: Reset Simulation -->
+    <div style="padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3); display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 700; color: #f87171; margin-bottom: 0.25rem;">🔄 Reset Simulation</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Restores slots to safe VACANT state while preserving audit logs.</div>
+      </div>
+      <button class="btn btn-danger" id="btn-reset-sim" style="width: 100%; font-size: 0.85rem;">Reset All Bays</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal: Slot Details -->
+<div id="slot-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center;">
+  <div class="card" style="width: 90%; max-width: 480px; position: relative;">
+    <div class="card-header">
+      <span class="card-title" id="modal-slot-title">Slot Details</span>
+      <button type="button" onclick="document.getElementById('slot-modal').style.display='none'" style="background:none;border:none;color:var(--text-muted);font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+    <div id="modal-slot-content">
+      <!-- Populated via JS -->
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/parking.js') }}"></script>
+{% endblock %}
+

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}SmartPark AI — Intelligent Facility Simulator{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🅿️</text></svg>">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <nav class="navbar">
+    <a href="{{ url_for('home') }}" class="brand">
+      <div class="brand-icon">SP</div>
+      <span>SmartPark AI</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="{{ url_for('home') }}" class="{% if request.path == '/' %}active{% endif %}">🏠 Home</a></li>
+      <li><a href="{{ url_for('entry') }}" class="{% if request.path == '/entry' %}active{% endif %}">🚗 Entry Machine</a></li>
+      <li><a href="{{ url_for('parking') }}" class="{% if request.path == '/parking' %}active{% endif %}">🅿️ Parking Area</a></li>
+      <li><a href="{{ url_for('guard_dashboard') }}" class="{% if request.path.startswith('/guard') %}active{% endif %}">🛡️ Guard Dashboard</a></li>
+      <li><a href="{{ url_for('exit_machine') }}" class="{% if request.path == '/exit' %}active{% endif %}">🚪 Exit Machine</a></li>
+    </ul>
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <span id="nav-sync-badge" class="badge badge-vacant" title="Shared SQLite State Live Synchronized">● LIVE SYNC</span>
+    </div>
+  </nav>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer style="text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border-color); margin-top: auto;">
+    SmartPark AI — Automated IoT & ANPR Smart Parking Management Simulator &copy; 2026
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
+

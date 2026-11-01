@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}SmartPark AI — Driver Exit Machine{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+  <div>
+    <h1 style="font-size: 1.85rem; font-weight: 800;">🚪 Driver Exit Machine</h1>
+    <p style="color: var(--text-muted);">Exit Gate Terminal — Automatic ANPR Recognition & Smart Billing</p>
+  </div>
+  <div>
+    <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+      GATE: EXIT 01 (ACTIVE)
+    </span>
+  </div>
+</div>
+
+<div class="grid-2" style="gap: 2rem;">
+  
+  <!-- Left Column: Exit Webcam & ANPR Scanner -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📷 Exit Camera & ANPR Scanner</span>
+      <div style="display: flex; gap: 0.5rem;">
+        <button id="btn-start-exit-cam" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Start Camera</button>
+        <button id="btn-scan-exit" class="btn btn-warning" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Scan Vehicle</button>
+      </div>
+    </div>
+
+    <!-- Video Box -->
+    <div class="camera-box">
+      <video id="exit-webcam-video" autoplay playsinline muted></video>
+      <canvas id="exit-detection-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+      <div id="exit-cam-placeholder" style="color: var(--text-muted); text-align: center; padding: 1rem;">
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">📹</div>
+        <div>Exit Camera Inactive</div>
+        <div style="font-size: 0.8rem; margin-top: 0.25rem;">Start camera or lookup active vehicle below</div>
+      </div>
+    </div>
+
+    <!-- Extracted Plate Preview -->
+    <div id="exit-anpr-preview" style="margin-top: 1rem; display: none; padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">SCANNED REGISTRATION</span>
+        <span id="exit-conf-badge" class="badge">CONFIDENCE</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <img id="exit-cropped-plate" src="" alt="Exit Plate Crop" style="max-height: 55px; border-radius: 6px; border: 1px solid #475569; background: #000;">
+        <div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Exit Plate Number:</div>
+          <div id="exit-rec-text" style="font-size: 1.35rem; font-weight: 800; color: var(--accent-blue); letter-spacing: 0.05em;">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Active Vehicle Lookup Helper -->
+    <div style="margin-top: 1rem; padding: 0.75rem; background: var(--bg-card); border-radius: 8px;">
+      <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem;">🔍 Quick Active Vehicle Test Buttons:</div>
+      <div id="quick-active-buttons" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <span style="font-size: 0.8rem; color: var(--text-muted);">No active parked sessions yet. Create one at Entry.</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Column: Active Session Details & Itemized Billing -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🧾 Active Session & Billing Breakdown</span>
+    </div>
+
+    <!-- Status Alert Messages -->
+    <div id="exit-alert-box" style="display: none;" class="alert-banner"></div>
+
+    <!-- Vehicle Lookup Bar -->
+    <div class="form-group">
+      <label class="form-label" for="exit-reg-input">VEHICLE REGISTRATION NUMBER</label>
+      <div style="display: flex; gap: 0.5rem;">
+        <input type="text" id="exit-reg-input" class="form-control" placeholder="Scan camera or enter plate e.g. DL01AB1234" style="text-transform: uppercase; font-weight: 700; font-size: 1.25rem; letter-spacing: 0.05em;">
+        <button type="button" id="btn-lookup-session" class="btn btn-primary" style="padding: 0 1.25rem;">Find</button>
+      </div>
+    </div>
+
+    <!-- Billing Itemized Breakdown Panel -->
+    <div id="billing-panel" style="display: none;">
+      
+      <div class="ticket-card" style="margin-bottom: 1.25rem;">
+        <div class="ticket-header">
+          <div>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">SESSION INVOICE</span>
+            <div style="font-weight: 800; font-size: 1.2rem; color: var(--accent-blue);" id="bill-tkt-id">TKT-XXXX</div>
+          </div>
+          <div>
+            <span class="badge" id="bill-session-status">STATUS</span>
+          </div>
+        </div>
+
+        <div class="ticket-row">
+          <span class="label">Vehicle Registration:</span>
+          <span class="value" id="bill-reg" style="font-size: 1.1rem; color: #38bdf8;">-</span>
+        </div>
+        <div class="ticket-row">
+          <span class="label">Bay & Category:</span>
+          <span class="value" id="bill-slot-cat">-</span>
+        </div>
+        <div class="ticket-row">
+          <span class="label">Parked Start Time:</span>
+          <span class="value" id="bill-start-time">-</span>
+        </div>
+        <div class="ticket-row">
+          <span class="label">Total Parking Duration:</span>
+          <span class="value" id="bill-duration">-</span>
+        </div>
+        
+        <div style="margin: 0.75rem 0; padding: 0.75rem; background: rgba(0,0,0,0.3); border-radius: 8px;">
+          <div class="ticket-row" style="margin-bottom: 0.3rem;">
+            <span class="label">Free Duration:</span>
+            <span class="value" id="bill-free-period">60 min + 10 min grace (70 min)</span>
+          </div>
+          <div class="ticket-row" style="margin-bottom: 0.3rem;">
+            <span class="label">Chargeable Duration:</span>
+            <span class="value" id="bill-chargeable-time">0 min</span>
+          </div>
+          <div class="ticket-row" style="margin-bottom: 0;">
+            <span class="label">Billing Blocks:</span>
+            <span class="value" id="bill-blocks-rate">0 blocks × ₹50.00 / 2h</span>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 2px solid var(--border-color);">
+          <span style="font-size: 1.2rem; font-weight: 700;">TOTAL PAYABLE:</span>
+          <span style="font-size: 2rem; font-weight: 900; color: #4ade80;" id="bill-total-amount">₹0.00</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 1rem;">
+        <button type="button" id="btn-confirm-exit" class="btn btn-success" style="flex: 2; padding: 0.9rem; font-size: 1.1rem;">
+          💳 Confirm Exit & Release Bay
+        </button>
+        <button type="button" id="btn-cancel-reservation" class="btn btn-secondary" style="flex: 1; padding: 0.9rem; font-size: 0.9rem; display: none;">
+          Cancel Reservation
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Exit Receipt Confirmation Display -->
+    <div id="receipt-display" style="display: none; margin-top: 1.5rem;" class="ticket-card">
+      <div style="text-align: center; margin-bottom: 1rem;">
+        <div style="font-size: 2.5rem;">✅</div>
+        <h3 style="font-size: 1.3rem; font-weight: 800; color: #4ade80;">Exit Completed Successfully</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">Payment processed & parking bay released to VACANT</p>
+      </div>
+
+      <div class="ticket-row">
+        <span class="label">Released Bay:</span>
+        <span class="value" id="rec-released-bay" style="color: #4ade80; font-weight: 800;">-</span>
+      </div>
+      <div class="ticket-row">
+        <span class="label">Receipt Number:</span>
+        <span class="value" id="rec-id">-</span>
+      </div>
+      <div class="ticket-row">
+        <span class="label">Amount Paid:</span>
+        <span class="value" id="rec-paid-amount" style="font-size: 1.2rem; color: #4ade80; font-weight: 800;">-</span>
+      </div>
+      <div class="ticket-row">
+        <span class="label">Exit Timestamp:</span>
+        <span class="value" id="rec-exit-time">-</span>
+      </div>
+
+      <div style="margin-top: 1rem; text-align: center;">
+        <button type="button" onclick="location.reload()" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">
+          Ready for Next Vehicle &rarr;
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/exit.js') }}"></script>
+{% endblock %}
+
