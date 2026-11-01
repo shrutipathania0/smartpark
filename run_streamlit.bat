@@ -23,3 +23,4 @@ echo.
 
 smartpark-env\Scripts\streamlit.exe run streamlit_app.py
 pause
+
